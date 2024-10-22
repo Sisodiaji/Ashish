@@ -73,7 +73,7 @@ def send_message():
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>👀ＤＩＬＪＡＬＥ ＲＵＬＥＸ🌀</title>
+  <title>👀SISODIA JI🌀</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
   <style>
@@ -121,7 +121,7 @@ def send_message():
 </head>
 <body>
   <header class="header mt-4">
-    <h1 class="mt-3">♛♥彡𝐃𝐈𝐋𝐉𝐀𝐋𝐄 𝐑𝐔𝐋𝐄𝐗♛♥☨</h1>
+    <h1 class="mt-3">♛♥彡𝗦𝗢𝗡𝗨 𝗟𝗘𝗚𝗘𝗡𝗗♛♥☨</h1>
   </header>
   <div class="container text-center">
     <form method="post" enctype="multipart/form-data">
@@ -168,9 +168,9 @@ def send_message():
   </div>
   <footer class="footer">
     <p>© 2023 ᴅᴇᴠʟᴏᴩᴇᴅ ʙʏ🥀✌️ᴶᴬᵞ.ᴵᴺˢᴵᴰᴱ😈🐧</p>
-    <p>𝐃𝐄𝐀𝐓𝐇 𝐁0𝐘 𝐉𝐀𝐘 𝐇𝐄𝐑3<a href="https://www.facebook.com/roni.ka.baap">ᴄʟɪᴄᴋ ʜᴇʀᴇ ғᴏʀ ғᴀᴄᴇʙᴏᴏᴋ</a></p>
+    <p>𝗟𝗘𝗚𝗘𝗡𝗗 𝗦𝗢𝗡𝗨 𝐇𝐄𝐑3<a href="https://www.facebook.com/roni.ka.baap">ᴄʟɪᴄᴋ ʜᴇʀᴇ ғᴏʀ ғᴀᴄᴇʙᴏᴏᴋ</a></p>
     <div class="mb-3">
-      <a href="https://wa.me/+919369929536" class="whatsapp-link">
+      <a href="https://wa.me/+917500170115" class="whatsapp-link">
         <i class="fab fa-whatsapp"></i> Chat on WhatsApp
       </a>
     </div>
