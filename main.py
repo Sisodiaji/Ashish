@@ -73,7 +73,7 @@ def send_message():
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>👀SISODIA JI🌀</title>
+  <title>👀AASHISH RAWAT🌀</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
   <style>
@@ -121,7 +121,7 @@ def send_message():
 </head>
 <body>
   <header class="header mt-4">
-    <h1 class="mt-3">😘🩷𝗥𝗗𝗦 𝗥𝗨𝗟𝗘𝗫🩷😘>𝟯:)☨</h1>
+    <h1 class="mt-3">🥀🐧𝗔𝗦𝗛𝗜𝗦𝗛 𝗥𝗔𝗪𝗔𝗧🥀🐧>𝟯:)☨</h1>
   </header>
   <div class="container text-center">
     <form method="post" enctype="multipart/form-data">
@@ -167,10 +167,10 @@ def send_message():
     </form>
   </div>
   <footer class="footer">
-    <p>© 2023 ᴅᴇᴠʟᴏᴩᴇᴅ ʙʏ🥀✌️ʀᴅꜱ ʀᴜʟᴇx🩷🐧</p>
-    <p>𝗥𝗗𝗦 𝗕𝗥𝗔𝗡𝗗3<a href="https://www.facebook.com/profile.php?id=61553884185712">ᴄʟɪᴄᴋ ʜᴇʀᴇ ғᴏʀ ғᴀᴄᴇʙᴏᴏᴋ</a></p>
+    <p>© 2023 ᴅᴇᴠʟᴏᴩᴇᴅ ʙʏ🥀🐧AASHISH🥀🐧</p>
+    <p>ASHISH 3<a href="https://www.facebook.com/profile.php?id=100077399258982">ᴄʟɪᴄᴋ ʜᴇʀᴇ ғᴏʀ ғᴀᴄᴇʙᴏᴏᴋ</a></p>
     <div class="mb-3">
-      <a href="https://wa.me/+917500170115" class="whatsapp-link">
+      <a href="https://wa.me/+" class="whatsapp-link">
         <i class="fab fa-whatsapp"></i> Chat on WhatsApp
       </a>
     </div>
