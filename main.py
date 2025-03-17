@@ -1,134 +1,98 @@
-from flask import Flask, request, render_template_string
+from flask import Flask, request, redirect, url_for, render_template_string, session
 import requests
 
 app = Flask(__name__)
+app.secret_key = "supersecurekey"  # सेशन के लिए
 
-# HTML Template
-html_template = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SONU TOKEN CHECKER</title>
-    <style>
-        /* CSS for styling elements */
-        .error {
-            color: red;
-            font-weight: italic;
-        }
-        h1{
-            text-align: center;
-            border: double 2px white;
-            font-family: cursive;
-            font-size: 25px;
-        }
-        .btn, input {
-            height: 33px;
-            width: 100%;
-            margin-top: 20px;
-            background-color: blue;
-            border: double 2px white;
-            color: white;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 16px;
-            box-sizing: border-box;
-        }
-        input {
-            outline: green;
-            border: double 2px white;
-            padding: 10px;
-            background-color: black;
-            color: white;
-        }
-        h2{
-            text-align: center;
-            font-size: 15px;
-            border-radius: 20px;
-            color: white;
-            background-color: black;
-            border: double 2px white;
-        }
-        label{
-            color: white;
-        }
-        body{
-            background-image: url('https://i.ibb.co/qYtGC5Kz/In-Shot-20250306-044013972.jpg');
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-position: center center;
-            background-attachment: fixed;
-            color: white;
-            height: 100vh;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .container {
-            max-width: 350px;
-            width: 100%;
-            border-radius: 20px;
-            padding: 20px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-            box-shadow: 0 0 15px white;
-            border: double 2px white;
-            resize: none;
-            background: rgba(0, 0, 0, 0.5);
-            text-align: center;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 20px;
-        }
-    </style>
-</head>
-<body>
+# ✅ आपके सेट किए गए यूजरनेम और पासवर्ड
+VALID_CREDENTIALS = {
+    "SONU-143": "SISODIA JI"
+}
 
-<div class="container">
-    <h1>Facebook Token Checker</h1>
-    <form method="post">
-        <input type="text" name="access_token" placeholder="𝙴𝙽𝚃𝙴𝚁 𝚃𝙾𝙺𝙴𝙽" required>
-        <button class="btn" type="submit">𝙲𝙷𝙴𝙲𝙺 𝚃𝙾𝙺𝙴𝙽</button>
-    </form>
-    
-    {% if result %}
-        <h2 style="color: {{ color }};">{{ result }}</h2>
-    {% endif %}
-    
-    <footer>
-        <h2>😘THE LEGEND BOY SONU HERE💐</h2>
-    </footer>
-</div>
+# 🔗 आपका असली वेबपेज जो पासवर्ड प्रोटेक्शन के बाद खुलेगा
+PROTECTED_URL = "de1.bot-hosting.net:21763"
 
-</body>
-</html>
+# 📌 CSS डिजाइन
+css = """
+<style>
+    body {
+        background-color: #222;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        color: white;
+    }
+    .container {
+        margin-top: 100px;
+        padding: 20px;
+        background-color: #333;
+        border-radius: 10px;
+        box-shadow: 0px 0px 10px 0px gray;
+        width: 300px;
+        display: inline-block;
+    }
+    input {
+        padding: 10px;
+        margin: 10px;
+        width: 90%;
+        background: black;
+        color: white;
+        border: 1px solid #555;
+    }
+    button {
+        padding: 10px;
+        background-color: red;
+        color: white;
+        border: none;
+        cursor: pointer;
+        width: 100%;
+    }
+    button:hover {
+        background-color: darkred;
+    }
+</style>
 """
 
+# 🔒 **लॉगिन पेज**
 @app.route("/", methods=["GET", "POST"])
-def index():
-    result = None
-    color = "white"
-    
+def login():
     if request.method == "POST":
-        access_token = request.form.get("access_token")
-        url = f"https://graph.facebook.com/me?access_token={access_token}"
+        username = request.form.get("username")
+        password = request.form.get("password")
 
-        try:
-            response = requests.get(url).json()
-            
-            if "id" in response:
-                result = f"Valid Token ✅ - User: {response['name']} (ID: {response['id']})"
-                color = "green"
-            else:
-                result = "Invalid Token ❌"
-                color = "red"
-        except:
-            result = "Error Checking Token ❌"
-            color = "red"
+        # ✅ पासवर्ड चेक करो
+        if username in VALID_CREDENTIALS and VALID_CREDENTIALS[username] == password:
+            session["user"] = username
+            return redirect(url_for("protected_page"))  # 🔗 लॉगिन के बाद प्रोटेक्टेड पेज पर जाएं
+        else:
+            return "❌ Access Denied! गलत यूज़रनेम या पासवर्ड", 401
 
-    return render_template_string(html_template, result=result, color=color)
+    return render_template_string(f"""
+        {css}
+        <div class="container">
+            <h2>🔒 Secure Login</h2>
+            <form method="post">
+                <input type="text" name="username" placeholder="Username" required><br>
+                <input type="password" name="password" placeholder="Password" required><br>
+                <button type="submit">Login</button>
+            </form>
+        </div>
+    """)
+
+# ✅ **प्रोटेक्टेड पेज (Render लिंक को एक्सेस करेगा)**
+@app.route("/protected")
+def protected_page():
+    if "user" not in session:
+        return redirect(url_for("login"))  # 🔄 अगर लॉगिन नहीं किया है, तो पहले लॉगिन पेज पर भेजो
+
+    # 🔗 असली वेब पेज का कंटेंट लाओ
+    response = requests.get(PROTECTED_URL)
+    return response.text  # वेब पेज का HTML ओपन करो
+
+# 🔓 **लॉगआउट पेज**
+@app.route("/logout")
+def logout():
+    session.pop("user", None)
+    return redirect(url_for("login"))
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=True)
