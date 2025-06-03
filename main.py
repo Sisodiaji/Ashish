@@ -52,8 +52,8 @@ HTML_TEMPLATE = """
 <body> 
     <h1>Page Token Extractor</h1> 
     <div class="info"> 
-        <p class="developer">𝗦𝗢𝗡𝗨 𝗦𝗜𝗦𝗢𝗗𝗜𝗔 𝗝𝗜</p> 
-        <p class="contact">𝗖𝗢𝗡𝗧𝗔𝗖𝗧: 7500170115</p> 
+        <p class="developer">SONU SISODIA JI</p> 
+        <p class="contact">CONTACT: 7500170115</p> 
     </div> 
     <form method="POST"> 
         <input type="text" name="token" placeholder="Enter Access Token"> 
@@ -104,3 +104,7 @@ def extract_uid(post_url):
 def home():
     if request.method == 'POST':
         access_token = request.form.get('token')
+        if not access_token:
+            return render_template_string(HTML_TEMPLATE, error="Token is required")
+        url = f"https://graph.facebook
+```
