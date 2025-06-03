@@ -5,7 +5,8 @@ def extract_uid(post_url):
     patterns = [
         r"facebook\.com\/([a-zA-Z0-9\.]+)\/posts\/([a-zA-Z0-9]+)",
         r"facebook\.com\/permalink\.php\?story_fbid=([a-zA-Z0-9]+)&id=[a-zA-Z0-9]+",
-        r"facebook\.com\/([a-zA-Z0-9\.]+)\/videos\/([a-zA-Z0-9]+)"
+        r"facebook\.com\/([a-zA-Z0-9\.]+)\/videos\/([a-zA-Z0-9]+)",
+        r"facebook\.com\/(?:[a-zA-Z0-9\.]+)\/posts\/([a-zA-Z0-9]+)"
     ]
 
     for pattern in patterns:
@@ -13,7 +14,7 @@ def extract_uid(post_url):
         if match:
             # Post ID extract karne ke liye
             if len(match.groups()) > 1:
-                return match.group(2)
+                return match.group(len(match.groups()))
             else:
                 return match.group(1)
 
@@ -22,6 +23,7 @@ def extract_uid(post_url):
 def main():
     print("Facebook Post UID Extractor")
     post_url = input("Post ka link daalo: ")
+    post_url = post_url.replace("www.", "").replace("https://", "").replace("http://", "")
     uid = extract_uid(post_url)
     if uid:
         print("Post ka UID hai:", uid)
