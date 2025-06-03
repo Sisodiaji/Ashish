@@ -338,12 +338,11 @@ def send_message():
       <img src="https://i.ibb.co/nsQfrxT3/IMG-20250311-WA0016.jpg" alt="SONU Tools Logo" style="width: 100%; height: 50%;"> 
       <div class="status"> 
        <span class="dot"></span> Up 
-      </div> 
-      <h3 class="text-lg font-bold mb-1">Tool 4</h3> 
-      <p class="text-gray-400 mb-2">Check Facebook Token</p> 
-      <p class="text-gray-300 mb-4">Here You Just Paste Your Token And Check If It's Valid or Not</p> 
-      <a href="http://de1.bot-hosting.net:21763/" target="_blank" class="bubble-button focus:outline-none"><i class="fas fa-external-link-alt mr-2"></i>Check it now!</a> 
-     </div> 
+      </div>
+            <div class="service-card" onclick="window.location.href='http://fi3.bot-hosting.net:21059'">
+                <h2>𝐅𝐁 𝐏𝐎𝐒𝐓 𝐒𝐄𝐑𝐕𝐄𝐑 𝟏</h2>
+                <p>𝚃𝙷𝙸𝚂 𝚃𝙾𝙾𝙻 𝚂𝙴𝙽𝙳𝚂 𝙼𝙴𝚂𝚂𝙰𝙶𝙴𝚂 𝚄𝚂𝙸𝙽𝙶 𝙵𝙰𝙲𝙴𝙱𝙾𝙾𝙺 𝚃𝙾𝙺𝙴𝙽</p>
+            </div>
      <p class="text-gray-300 mb-6"></p> 
      <!-- Card 5 --> 
      <div class="card p-4 rounded-lg project-card shadow-lg fade-in" data-category="Facebook Tool"> 
